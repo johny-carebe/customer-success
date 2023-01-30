@@ -10,7 +10,6 @@ class CustomerSuccessBalancing
 
   # Returns the ID of the customer success with most customers
   def execute
-    cs_with_most_customers = { id: 0, customers: 0}
     previous_cs_score = 0
 
     @customer_success.delete_if { |cs| @away_customer_success.include?(cs[:id]) }
@@ -18,13 +17,14 @@ class CustomerSuccessBalancing
     @customer_success.each do |cs|
       cs_customers = count_customers_by_cs(@customers, cs[:score], previous_cs_score)
 
-      if cs_customers > cs_with_most_customers[:customers]
-        cs_with_most_customers = { id: cs[:id], customers: cs_customers }
-        previous_cs_score = cs[:score]
-      end
+      cs.store(:customers, cs_customers)
+      previous_cs_score = cs[:score]
     end
 
-    cs_with_most_customers[:id]
+    cs_with_most_customers = @customer_success.max_by { |cs| cs[:customers] }
+    most_customers_is_unique = @customer_success.count {|cs| cs[:customers] == cs_with_most_customers[:customers]} == 1
+
+    most_customers_is_unique ? cs_with_most_customers[:id] : 0
   end
 
   def count_customers_by_cs(customers, cs_score, previous_cs_score)
@@ -44,14 +44,14 @@ class CustomerSuccessBalancingTests < Minitest::Test
     assert_equal 1, balancer.execute
   end
 
-  # def test_scenario_two
-  #   balancer = CustomerSuccessBalancing.new(
-  #     build_scores([11, 21, 31, 3, 4, 5]),
-  #     build_scores([10, 10, 10, 20, 20, 30, 30, 30, 20, 60]),
-  #     []
-  #   )
-  #   assert_equal 0, balancer.execute
-  # end
+  def test_scenario_two
+    balancer = CustomerSuccessBalancing.new(
+      build_scores([11, 21, 31, 3, 4, 5]),
+      build_scores([10, 10, 10, 20, 20, 30, 30, 30, 20, 60]),
+      []
+    )
+    assert_equal 0, balancer.execute
+  end
 
   # def test_scenario_three
   #   balancer = CustomerSuccessBalancing.new(
