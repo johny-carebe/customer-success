@@ -11,24 +11,13 @@ class CustomerSuccessBalancing
 
     return 0 if no_customer_is_available(@customer_success)
 
-    sort_by_score(@customer_success)
-    sort_by_score(@customers)
+    sort_customer_success_by_score(@customer_success)
     add_customers_by_cs_on_cs(@customer_success, @customers)
 
     cs_with_most_customers(@customer_success)
   end
 
   private
-
-  def cs_with_most_customers(customer_success)
-    cs_with_most_customers = find_cs_with_most_customers(customer_success)
-
-    if most_customers_is_unique(customer_success, cs_with_most_customers)
-      cs_with_most_customers[:id]
-    else
-      0
-    end
-  end
 
   def delete_away_customer_success(customer_success)
     customer_success.delete_if { |cs| @away_customer_success.include?(cs[:id]) }
@@ -38,30 +27,38 @@ class CustomerSuccessBalancing
     customer_success.empty?
   end
 
-  def sort_by_score(entities)
-    entities.sort_by! { |entity| entity[:score] }
+  def sort_customer_success_by_score(customer_success)
+    customer_success.sort_by! { |cs| cs[:score] }
   end
 
   def add_customers_by_cs_on_cs(customer_success, customers)
-    previous_cs_score = 0
+    cs_customers = search_cs_customers(customers, customer_success, Hash.new(0))
 
-    customer_success.each do |cs|
-      store_customers_on_cs(customers, cs, previous_cs_score)
-
-      previous_cs_score = cs[:score]
-    end
+    update_cs_costumers_on_cs(customer_success, cs_customers)
   end
 
-  def store_customers_on_cs(customers, cs, previous_cs_score)
-    cs_customers = count_customers_by_cs(customers, cs[:score], previous_cs_score)
+  def search_cs_customers(customers, customer_success, cs_customers)
+    customers.each do |customer|
+      customers_by_cs = search_customer_success_by_customer(customer_success, customer)
+      cs_customers[customers_by_cs[:id]] += 1 unless customers_by_cs.nil?
+    end
 
-    cs.store(:customers, cs_customers)
+    cs_customers
   end
 
-  def count_customers_by_cs(customers, cs_score, previous_cs_score)
-    customers.count do |customer|
-      (customer[:score] <= cs_score) && (customer[:score] > previous_cs_score)
-    end
+  def search_customer_success_by_customer(customer_success, customer)
+    customer_success.bsearch { |cs| cs[:score] >= customer[:score] }
+  end
+
+  def update_cs_costumers_on_cs(customer_success, store_cs_customers)
+    customer_success.each { |cs| cs[:customers] = store_cs_customers[cs[:id]] }
+  end
+
+  def cs_with_most_customers(customer_success)
+    cs_with_most_customers = find_cs_with_most_customers(customer_success)
+    cs_with_most_customers_is_unique = most_customers_is_unique(customer_success, cs_with_most_customers)
+
+    cs_with_most_customers_is_unique ? cs_with_most_customers[:id] : 0
   end
 
   def find_cs_with_most_customers(customer_success)
