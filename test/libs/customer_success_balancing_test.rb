@@ -2,6 +2,7 @@ require 'minitest/autorun'
 require 'timeout'
 require_relative '../../lib/customer-success/customer_success_balancing'
 
+# rubocop:disable Metrics/ClassLength
 class CustomerSuccessBalancingTests < Minitest::Test
   def test_scenario_one
     balancer = CustomerSuccessBalancing.new(
@@ -94,13 +95,121 @@ class CustomerSuccessBalancingTests < Minitest::Test
     assert_equal 1, balancer.execute
   end
 
-  def test_cs_with_customer_score_but_no_cs_available
+  def test_cs_available_but_no_customer
     balancer = CustomerSuccessBalancing.new(
-      build_scores([1000, 1001]),
-      build_scores([20, 30, 35, 40]),
-      [1, 2]
+      build_scores([10, 21, 32]),
+      [],
+      []
     )
     assert_equal 0, balancer.execute
+  end
+
+  def test_cs_have_no_score_duplicate
+    balancer = CustomerSuccessBalancing.new(
+      build_scores([60, 60, 95, 75]),
+      build_scores([90, 20, 70, 40, 60, 10]),
+      [2, 4]
+    )
+    assert_equal(-1, balancer.execute)
+  end
+
+  def test_cs_is_positive
+    balancer = CustomerSuccessBalancing.new(
+      build_scores([-60, 60, 95, 75]),
+      build_scores([90, 20, 70, 40, 60, 10]),
+      [2, 4]
+    )
+    assert_equal(-1, balancer.execute)
+  end
+
+  def test_customer_is_positive
+    balancer = CustomerSuccessBalancing.new(
+      build_scores([50, 60, 95, 75]),
+      build_scores([90, 20, -70, 40, 60, 10]),
+      [2, 4]
+    )
+    assert_equal(-1, balancer.execute)
+  end
+
+  def test_away_cs_is_positive
+    balancer = CustomerSuccessBalancing.new(
+      build_scores([50, 60, 95, 75]),
+      build_scores([90, 20, 70, 40, 60, 10]),
+      [2, -4]
+    )
+    assert_equal(-1, balancer.execute)
+  end
+
+  def test_cs_is_not_zero
+    balancer = CustomerSuccessBalancing.new(
+      build_scores([0, 60, 95, 75]),
+      build_scores([90, 20, 70, 40, 60, 10]),
+      [2, 4]
+    )
+    assert_equal(-1, balancer.execute)
+  end
+
+  def test_customer_is_not_zero
+    balancer = CustomerSuccessBalancing.new(
+      build_scores([50, 60, 95, 75]),
+      build_scores([0, 20, 70, 40, 60, 10]),
+      [2, 4]
+    )
+    assert_equal(-1, balancer.execute)
+  end
+
+  def test_away_cs_is_not_zero
+    balancer = CustomerSuccessBalancing.new(
+      build_scores([90, 60, 95, 75]),
+      build_scores([90, 20, 70, 40, 60, 10]),
+      [2, 0]
+    )
+    assert_equal(-1, balancer.execute)
+  end
+
+  def test_cs_is_less_than1000
+    balancer = CustomerSuccessBalancing.new(
+      build_scores(Array(1..1_000)),
+      build_scores([90, 20, 70, 40, 60, 10]),
+      [2, 4]
+    )
+    assert_equal(-1, balancer.execute)
+  end
+
+  def test_customer_is_less_than1000000
+    balancer = CustomerSuccessBalancing.new(
+      build_scores([50, 60, 95, 75]),
+      build_scores(Array(1_000_000.times { 1 })),
+      [2, 4]
+    )
+    assert_equal(-1, balancer.execute)
+  end
+
+  def test_away_cs_is_a_existent_cs
+    balancer = CustomerSuccessBalancing.new(
+      build_scores([90, 60, 95, 75]),
+      build_scores([90, 20, 70, 40, 60, 10]),
+      [1, 5]
+    )
+    assert_equal(-1, balancer.execute)
+  end
+
+  def test_away_cs_is_no_less_than_cs_divided_by_2_round_down
+    balancer = CustomerSuccessBalancing.new(
+      build_scores([90, 60, 95, 75, 12]),
+      build_scores([90, 20, 70, 40, 60, 10]),
+      [2, 3, 4]
+    )
+    assert_equal(-1, balancer.execute)
+  end
+
+  def test_stress
+    balancer = CustomerSuccessBalancing.new(
+      build_scores(Array(1..999)),
+      build_scores(Array.new(999_999) { 1 }),
+      Array(1..499)
+    )
+    assert_equal 500, balancer.execute
   end
 
   private
@@ -111,3 +220,4 @@ class CustomerSuccessBalancingTests < Minitest::Test
     end
   end
 end
+# rubocop:enable Metrics/ClassLength
