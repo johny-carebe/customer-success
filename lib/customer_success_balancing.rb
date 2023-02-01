@@ -9,7 +9,8 @@ class CustomerSuccessBalancing
 
   # Returns the ID of the customer success with most customers
   def execute
-    return -1 unless CustomerSuccessBalancingValidator.validate(@customer_success, @customers, @away_customer_success)
+    return -1 unless CustomerSuccessBalancingValidator.new.validate(@customer_success, @customers,
+                                                                    @away_customer_success)
     return 0 if no_customer_is_available(@customer_success)
 
     add_customers_by_cs_on_cs(@customer_success, @customers)
@@ -17,6 +18,16 @@ class CustomerSuccessBalancing
   end
 
   private
+
+  def no_customer_is_available(customer_success)
+    delete_away_customer_success(customer_success)
+
+    customer_success.empty?
+  end
+
+  def delete_away_customer_success(customer_success)
+    customer_success.delete_if { |cs| @away_customer_success.include?(cs[:id]) }
+  end
 
   def add_customers_by_cs_on_cs(customer_success, customers)
     sort_customer_success_by_score(customer_success)

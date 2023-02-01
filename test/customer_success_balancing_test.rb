@@ -1,8 +1,7 @@
 require 'minitest/autorun'
 require 'timeout'
-require_relative '../../lib/customer-success/customer_success_balancing'
+require_relative '../lib/customer_success_balancing'
 
-# rubocop:disable Metrics/ClassLength
 class CustomerSuccessBalancingTests < Minitest::Test
   def test_scenario_one
     balancer = CustomerSuccessBalancing.new(
@@ -209,7 +208,8 @@ class CustomerSuccessBalancingTests < Minitest::Test
       build_scores(Array.new(999_999) { 1 }),
       Array(1..499)
     )
-    assert_equal 500, balancer.execute
+    result = Timeout.timeout(1.5) { balancer.execute }
+    assert_equal 500, result
   end
 
   private
@@ -220,4 +220,3 @@ class CustomerSuccessBalancingTests < Minitest::Test
     end
   end
 end
-# rubocop:enable Metrics/ClassLength

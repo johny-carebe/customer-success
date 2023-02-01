@@ -1,6 +1,6 @@
-TEST := test/**/*_test.rb
+TEST := test/*_test.rb
 
 .PHONY : test
 
 test :
-		ruby $(TEST)
+	ruby $(TEST)
